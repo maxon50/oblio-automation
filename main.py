@@ -1,11 +1,11 @@
 #!/usr/bin/env python3
 import argparse
 import datetime as dt
-import json
 import os
 import re
 import sys
 import time
+import urllib.parse
 import urllib.request
 from zoneinfo import ZoneInfo
 
@@ -24,8 +24,9 @@ LOGIN_RETRIES = int(os.getenv("LOGIN_RETRIES", "3").strip())
 EMIT_RETRIES = int(os.getenv("EMIT_RETRIES", "2").strip())
 RUN_RETRIES = int(os.getenv("RUN_RETRIES", "2").strip())
 RETRY_DELAY_SECONDS = int(os.getenv("RETRY_DELAY_SECONDS", "5").strip())
-ALERT_WEBHOOK_URL = os.getenv("ALERT_WEBHOOK_URL", "").strip()
 ALERT_ON_SUCCESS = os.getenv("ALERT_ON_SUCCESS", "1").strip() == "1"
+TELEGRAM_BOT_TOKEN = os.getenv("TELEGRAM_BOT_TOKEN", "").strip()
+TELEGRAM_CHAT_ID = os.getenv("TELEGRAM_CHAT_ID", "").strip()
 
 
 def parse_args() -> argparse.Namespace:
@@ -81,13 +82,18 @@ def click_first(page: Page, selectors: list[str]) -> None:
 
 
 def send_alert(message: str) -> None:
-    if not ALERT_WEBHOOK_URL:
+    if not TELEGRAM_BOT_TOKEN or not TELEGRAM_CHAT_ID:
         return
-    body = json.dumps({"text": message}).encode("utf-8")
+    body = urllib.parse.urlencode(
+        {
+            "chat_id": TELEGRAM_CHAT_ID,
+            "text": message,
+        }
+    ).encode("utf-8")
     req = urllib.request.Request(
-        ALERT_WEBHOOK_URL,
+        f"https://api.telegram.org/bot{TELEGRAM_BOT_TOKEN}/sendMessage",
         data=body,
-        headers={"Content-Type": "application/json"},
+        headers={"Content-Type": "application/x-www-form-urlencoded"},
         method="POST",
     )
     try:
@@ -250,9 +256,7 @@ def run() -> int:
             print(f"Cu factura deja existenta: {summary['already']}")
             print(f"Facturi emise acum: {summary['created']}")
             if ALERT_ON_SUCCESS:
-                send_alert(
-                    f"[Oblio] OK {day} | matched={summary['matched']} already={summary['already']} created={summary['created']}"
-                )
+                send_alert("Facturi cu SUCCES")
             return 0
         except Exception as exc:
             last_exc = exc
@@ -260,7 +264,7 @@ def run() -> int:
             if attempt < RUN_RETRIES:
                 time.sleep(RETRY_DELAY_SECONDS)
 
-    send_alert(f"[Oblio] FAIL {day} dupa {RUN_RETRIES} incercari. Eroare: {last_exc}")
+    send_alert("Facturi cu EROARE")
     return 1
 
 
