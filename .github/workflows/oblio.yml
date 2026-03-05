@@ -1,0 +1,53 @@
+name: Oblio Emitere Facturi
+
+on:
+  workflow_dispatch:
+    inputs:
+      date:
+        description: "Optional YYYY-MM-DD"
+        required: false
+  schedule:
+    - cron: "5 4 * * *"
+    - cron: "5 5 * * *"
+
+jobs:
+  run-oblio:
+    runs-on: ubuntu-latest
+    timeout-minutes: 30
+    env:
+      OBLIO_EMAIL: ${{ secrets.OBLIO_EMAIL }}
+      OBLIO_PASSWORD: ${{ secrets.OBLIO_PASSWORD }}
+      OBLIO_LOGIN_URL: ${{ secrets.OBLIO_LOGIN_URL }}
+      OBLIO_STRIPE_URL: ${{ secrets.OBLIO_STRIPE_URL }}
+      TIMEZONE: ${{ secrets.TIMEZONE }}
+      HEADLESS: ${{ secrets.HEADLESS }}
+      LOGIN_RETRIES: ${{ secrets.LOGIN_RETRIES }}
+      EMIT_RETRIES: ${{ secrets.EMIT_RETRIES }}
+      RUN_RETRIES: ${{ secrets.RUN_RETRIES }}
+      RETRY_DELAY_SECONDS: ${{ secrets.RETRY_DELAY_SECONDS }}
+      ALERT_WEBHOOK_URL: ${{ secrets.ALERT_WEBHOOK_URL }}
+      ALERT_ON_SUCCESS: ${{ secrets.ALERT_ON_SUCCESS }}
+
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-python@v5
+        with:
+          python-version: "3.11"
+      - run: |
+          python -m pip install --upgrade pip
+          pip install -r requirements.txt
+          python -m playwright install --with-deps chromium
+      - if: ${{ github.event_name == 'schedule' || github.event.inputs.date == '' }}
+        run: python main.py
+      - if: ${{ github.event_name == 'workflow_dispatch' && github.event.inputs.date != '' }}
+        run: python main.py --date "${{ github.event.inputs.date }}"
+      - if: failure()
+        uses: actions/upload-artifact@v4
+        with:
+          name: oblio-errors
+          path: |
+            error-timeout.png
+            error-generic.png
+          if-no-files-found: ignore
+
+ls -la .github/workflows
