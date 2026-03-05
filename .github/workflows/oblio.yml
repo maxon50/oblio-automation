@@ -25,8 +25,9 @@ jobs:
       EMIT_RETRIES: ${{ secrets.EMIT_RETRIES }}
       RUN_RETRIES: ${{ secrets.RUN_RETRIES }}
       RETRY_DELAY_SECONDS: ${{ secrets.RETRY_DELAY_SECONDS }}
-      ALERT_WEBHOOK_URL: ${{ secrets.ALERT_WEBHOOK_URL }}
       ALERT_ON_SUCCESS: ${{ secrets.ALERT_ON_SUCCESS }}
+      TELEGRAM_BOT_TOKEN: ${{ secrets.TELEGRAM_BOT_TOKEN }}
+      TELEGRAM_CHAT_ID: ${{ secrets.TELEGRAM_CHAT_ID }}
 
     steps:
       - uses: actions/checkout@v4
