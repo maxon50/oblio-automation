@@ -50,5 +50,3 @@ jobs:
             error-timeout.png
             error-generic.png
           if-no-files-found: ignore
-
-ls -la .github/workflows
